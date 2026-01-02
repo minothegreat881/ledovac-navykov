@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { Header } from './components/Header';
 import { LeftSidebar } from './components/LeftSidebar';
@@ -45,6 +45,52 @@ function AppContent() {
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
 
   const totalStats = getTotalStats(habits, records);
+
+  // Request notification permission and setup reminder checks
+  useEffect(() => {
+    // Request permission for notifications
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    // Check for reminders every minute
+    const checkReminders = () => {
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const today = formatDate(now);
+
+      habits.forEach(habit => {
+        if (habit.reminderTime === currentTime) {
+          // Check if habit is not completed today
+          const record = getRecord(habit.id, today);
+          if (!record || record.status !== 'success') {
+            // Send notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(`🔔 ${habit.name}`, {
+                body: `Čas na tvoj návyk! ${habit.icon}`,
+                icon: '/icons/icon-192x192.png',
+                tag: habit.id,
+                requireInteraction: true
+              });
+            }
+            // Also show toast
+            toast(`🔔 Pripomienka: ${habit.name}`, {
+              description: 'Čas splniť tento návyk!',
+              duration: 10000,
+            });
+          }
+        }
+      });
+    };
+
+    // Check immediately on load
+    checkReminders();
+
+    // Then check every minute
+    const interval = setInterval(checkReminders, 60000);
+
+    return () => clearInterval(interval);
+  }, [habits, getRecord]);
 
   const filteredHabits = useMemo(() => {
     let filtered = habits;

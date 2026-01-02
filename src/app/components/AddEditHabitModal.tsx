@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Habit, HabitType, MeasurementUnit, measurementPresets, measurementUnitLabels } from '../types';
-import { Ruler, ToggleLeft, Clock } from 'lucide-react';
+import { Ruler, ToggleLeft, Clock, Bell } from 'lucide-react';
 
 const EMOJI_OPTIONS = [
   '💪', '🏃', '📚', '🧘', '💧', '🥗', '😴', '✍️',
@@ -36,6 +36,8 @@ export function AddEditHabitModal({ isOpen, onClose, onSave, editingHabit }: Add
   const [timeGoalH, setTimeGoalH] = useState<string>('');
   const [timeGoalM, setTimeGoalM] = useState<string>('');
   const [timeGoalS, setTimeGoalS] = useState<string>('');
+  // Reminder time
+  const [reminderTime, setReminderTime] = useState<string>('');
 
   // Helper to convert seconds to H:M:S
   const secondsToHMS = (totalSeconds: number) => {
@@ -67,6 +69,7 @@ export function AddEditHabitModal({ isOpen, onClose, onSave, editingHabit }: Add
         setTimeGoalM('');
         setTimeGoalS('');
       }
+      setReminderTime(editingHabit.reminderTime || '');
     } else {
       setName('');
       setType('good');
@@ -80,6 +83,7 @@ export function AddEditHabitModal({ isOpen, onClose, onSave, editingHabit }: Add
       setTimeGoalH('');
       setTimeGoalM('');
       setTimeGoalS('');
+      setReminderTime('');
     }
   }, [editingHabit, isOpen]);
 
@@ -108,6 +112,7 @@ export function AddEditHabitModal({ isOpen, onClose, onSave, editingHabit }: Add
       measurementGoal: measurable && measurementGoal ? parseFloat(measurementGoal) : undefined,
       trackTime: measurable && supportsTime ? trackTime : undefined,
       timeGoal: measurable && trackTime && timeGoalSeconds > 0 ? timeGoalSeconds : undefined,
+      reminderTime: reminderTime || undefined,
     };
 
     onSave(habit);
@@ -342,6 +347,30 @@ export function AddEditHabitModal({ isOpen, onClose, onSave, editingHabit }: Add
               placeholder="zdravie, ranná rutina, šport"
               className="bg-white/50 dark:bg-black/20"
             />
+          </div>
+
+          {/* Reminder Time */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="font-semibold">Pripomienka</p>
+                <p className="text-sm opacity-70">Kedy ti má prísť notifikácia?</p>
+              </div>
+            </div>
+            <Input
+              type="time"
+              value={reminderTime}
+              onChange={(e) => setReminderTime(e.target.value)}
+              className="bg-white/50 dark:bg-black/20 w-40"
+            />
+            {reminderTime && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                🔔 Notifikácia príde o {reminderTime}
+              </p>
+            )}
           </div>
 
           {/* Preview */}

@@ -35,6 +35,8 @@ export interface Habit {
   // Secondary measurement (e.g., time for running)
   trackTime?: boolean;
   timeGoal?: number; // Goal in minutes
+  // Reminder time (HH:MM format)
+  reminderTime?: string;
 }
 
 export interface HabitRecord {
