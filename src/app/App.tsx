@@ -58,6 +58,17 @@ function AppContent() {
           return;
         }
 
+        // Create notification channel with sound (Android 8+)
+        await LocalNotifications.createChannel({
+          id: 'habit-reminders',
+          name: 'Pripomienky návykov',
+          description: 'Notifikácie pre pripomienky návykov',
+          importance: 4, // HIGH - makes sound
+          visibility: 1, // PUBLIC
+          sound: 'default',
+          vibration: true,
+        });
+
         // Cancel all existing notifications first
         const pending = await LocalNotifications.getPending();
         if (pending.notifications.length > 0) {
@@ -94,6 +105,9 @@ function AppContent() {
             sound: 'default',
             smallIcon: 'ic_launcher',
             largeIcon: 'ic_launcher',
+            channelId: 'habit-reminders',
+            importance: 4,
+            visibility: 1,
           };
         });
 
@@ -124,14 +138,28 @@ function AppContent() {
       // Send notification in 5 seconds
       const scheduleDate = new Date(Date.now() + 5000);
 
+      // Create channel for test notification
+      await LocalNotifications.createChannel({
+        id: 'habit-reminders',
+        name: 'Pripomienky návykov',
+        description: 'Notifikácie pre pripomienky návykov',
+        importance: 4,
+        visibility: 1,
+        sound: 'default',
+        vibration: true,
+      });
+
       await LocalNotifications.schedule({
         notifications: [{
           id: 9999,
           title: '🔔 Test notifikácie',
-          body: 'Ak toto vidíš, notifikácie fungujú!',
+          body: 'Ak toto vidíš, notifikácie fungujú! 🎉',
           schedule: { at: scheduleDate },
           sound: 'default',
           smallIcon: 'ic_launcher',
+          channelId: 'habit-reminders',
+          importance: 4,
+          visibility: 1,
         }]
       });
 
