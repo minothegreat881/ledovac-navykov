@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Habit, HabitRecord, measurementUnitLabels } from '../types';
 import { Button } from './ui/button';
@@ -147,6 +147,34 @@ function MiniBarChart({ data, color, height = 60 }: { data: number[], color: str
 }
 
 export function HabitDetailDrawer({ isOpen, onClose, habit, records, onEdit, onDelete }: HabitDetailDrawerProps) {
+  // Swipe to close gesture
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
+
+    // Only track horizontal swipes (deltaX > deltaY means more horizontal than vertical)
+    if (deltaX > 0 && deltaX > deltaY) {
+      setSwipeOffset(Math.min(deltaX, 200)); // Cap at 200px
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (swipeOffset > 100) {
+      // If swiped more than 100px, close the drawer
+      onClose();
+    }
+    setSwipeOffset(0);
+  };
+
   if (!habit) return null;
 
   const streak = calculateStreak(habit.id, records);
@@ -228,7 +256,13 @@ export function HabitDetailDrawer({ isOpen, onClose, habit, records, onEdit, onD
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full overflow-y-auto bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-0">
+      <SheetContent
+        className="w-full overflow-y-auto bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-0 transition-transform"
+        style={{ transform: `translateX(${swipeOffset}px)`, opacity: 1 - swipeOffset / 300 }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="max-w-2xl mx-auto p-6">
           <SheetHeader className="mb-6">
             <SheetTitle className="text-2xl">Detail návyku</SheetTitle>
