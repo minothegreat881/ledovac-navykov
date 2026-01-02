@@ -16,7 +16,7 @@ import { useHabits } from './hooks/useHabits';
 import { Habit, HabitType } from './types';
 import { formatDate, formatDisplayDate } from './utils/dateUtils';
 import { calculateStreak, getTotalStats } from './utils/habitStats';
-import { Flame, Target, TrendingUp, XCircle, CalendarDays, Bell } from 'lucide-react';
+import { Flame, Target, TrendingUp, XCircle, CalendarDays } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Toaster, toast } from 'sonner';
 
@@ -69,12 +69,13 @@ function AppContent() {
           vibration: true,
         });
 
-        // Cancel ALL existing notifications first (both pending and repeating)
+        // Cancel ALL existing notifications first
         const pending = await LocalNotifications.getPending();
         if (pending.notifications.length > 0) {
           await LocalNotifications.cancel({
             notifications: pending.notifications.map(n => ({ id: n.id }))
           });
+          console.log('Cancelled all pending notifications:', pending.notifications.length);
         }
 
         // Schedule notifications for each habit with reminder time
@@ -91,45 +92,57 @@ function AppContent() {
           for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
+            hash = hash & hash;
           }
-          return Math.abs(hash) % 100000 + 1; // Ensure positive and reasonable range
+          return Math.abs(hash) % 100000 + 1;
         };
 
-        const notifications = habitsWithReminder.map((habit) => {
-          const [hours, minutes] = habit.reminderTime!.split(':').map(Number);
-          const now = new Date();
-          const scheduleDate = new Date();
-          scheduleDate.setHours(hours, minutes, 0, 0);
+        // Track scheduled IDs to prevent duplicates
+        const scheduledIds = new Set<number>();
 
-          // If time already passed today, schedule for tomorrow
-          if (scheduleDate <= now) {
-            scheduleDate.setDate(scheduleDate.getDate() + 1);
-          }
+        const notifications = habitsWithReminder
+          .map((habit) => {
+            const notificationId = hashStringToNumber(habit.id);
 
-          // Use stable ID based on habit ID, not array index
-          const notificationId = hashStringToNumber(habit.id);
+            // Skip if this ID was already scheduled (duplicate prevention)
+            if (scheduledIds.has(notificationId)) {
+              console.log('Skipping duplicate notification for:', habit.name);
+              return null;
+            }
+            scheduledIds.add(notificationId);
 
-          return {
-            id: notificationId,
-            title: `🔔 ${habit.name}`,
-            body: `Čas na tvoj návyk! ${habit.icon}`,
-            schedule: {
-              at: scheduleDate,
-              repeats: true,
-              every: 'day' as const
-            },
-            sound: 'default',
-            smallIcon: 'ic_launcher',
-            largeIcon: 'ic_launcher',
-            channelId: 'habit-reminders',
-            importance: 4,
-            visibility: 1,
-          };
-        });
+            const [hours, minutes] = habit.reminderTime!.split(':').map(Number);
+            const now = new Date();
+            const scheduleDate = new Date();
+            scheduleDate.setHours(hours, minutes, 0, 0);
 
-        await LocalNotifications.schedule({ notifications });
-        console.log('Scheduled notifications:', notifications.map(n => ({ id: n.id, title: n.title })));
+            if (scheduleDate <= now) {
+              scheduleDate.setDate(scheduleDate.getDate() + 1);
+            }
+
+            return {
+              id: notificationId,
+              title: `🔔 ${habit.name}`,
+              body: `Čas na tvoj návyk! ${habit.icon}`,
+              schedule: {
+                at: scheduleDate,
+                repeats: true,
+                every: 'day' as const
+              },
+              sound: 'default',
+              smallIcon: 'ic_launcher',
+              largeIcon: 'ic_launcher',
+              channelId: 'habit-reminders',
+              importance: 4,
+              visibility: 1,
+            };
+          })
+          .filter((n): n is NonNullable<typeof n> => n !== null);
+
+        if (notifications.length > 0) {
+          await LocalNotifications.schedule({ notifications });
+          console.log('Scheduled', notifications.length, 'notifications');
+        }
 
       } catch (error) {
         console.log('LocalNotifications error:', error);
@@ -142,49 +155,6 @@ function AppContent() {
 
     scheduleNotifications();
   }, [habits]);
-
-  // Test notification function
-  const sendTestNotification = async () => {
-    try {
-      const permResult = await LocalNotifications.requestPermissions();
-      if (permResult.display !== 'granted') {
-        toast.error('Notifikácie nie sú povolené!');
-        return;
-      }
-
-      // Send notification in 5 seconds
-      const scheduleDate = new Date(Date.now() + 5000);
-
-      // Create channel for test notification
-      await LocalNotifications.createChannel({
-        id: 'habit-reminders',
-        name: 'Pripomienky návykov',
-        description: 'Notifikácie pre pripomienky návykov',
-        importance: 4,
-        visibility: 1,
-        sound: 'default',
-        vibration: true,
-      });
-
-      await LocalNotifications.schedule({
-        notifications: [{
-          id: 9999,
-          title: '🔔 Test notifikácie',
-          body: 'Ak toto vidíš, notifikácie fungujú! 🎉',
-          schedule: { at: scheduleDate },
-          sound: 'default',
-          smallIcon: 'ic_launcher',
-          channelId: 'habit-reminders',
-          importance: 4,
-          visibility: 1,
-        }]
-      });
-
-      toast.success('Testovacia notifikácia príde o 5 sekúnd! Môžeš zatvoriť appku.');
-    } catch (error) {
-      toast.error('Chyba: ' + String(error));
-    }
-  };
 
   const filteredHabits = useMemo(() => {
     let filtered = habits;
@@ -331,13 +301,6 @@ function AppContent() {
             <p className="mt-2 text-xs md:text-sm opacity-80 italic hidden sm:block">
               Každý deň je nová príležitosť zmeniť svoje návyky. Pokračuj! 💪
             </p>
-            <button
-              onClick={sendTestNotification}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors text-sm font-medium"
-            >
-              <Bell className="w-4 h-4" />
-              Test notifikácie (5s)
-            </button>
           </motion.div>
 
           {/* KPI Cards */}
