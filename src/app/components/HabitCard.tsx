@@ -287,36 +287,32 @@ export function HabitCard({
           )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - hide when completed */}
         <div className="flex items-center gap-2">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSuccess}
-            className={`p-2 rounded-lg transition-all ${
-              status === 'success'
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
-                : 'bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-500'
-            }`}
-          >
-            <Check className="w-5 h-5" />
-          </motion.button>
+          {status !== 'success' && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSuccess}
+              className="p-2 rounded-lg transition-all bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-500"
+            >
+              <Check className="w-5 h-5" />
+            </motion.button>
+          )}
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onFail?.();
-            }}
-            className={`p-2 rounded-lg transition-all ${
-              status === 'fail'
-                ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/50'
-                : 'bg-white/5 hover:bg-rose-500/20 hover:text-rose-500'
-            }`}
-          >
-            <X className="w-5 h-5" />
-          </motion.button>
+          {status !== 'fail' && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFail?.();
+              }}
+              className="p-2 rounded-lg transition-all bg-white/5 hover:bg-rose-500/20 hover:text-rose-500"
+            >
+              <X className="w-5 h-5" />
+            </motion.button>
+          )}
 
           <motion.button
             whileHover={{ scale: 1.05 }}
