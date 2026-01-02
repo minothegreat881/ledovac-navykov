@@ -16,7 +16,7 @@ import { useHabits } from './hooks/useHabits';
 import { Habit, HabitType } from './types';
 import { formatDate, formatDisplayDate } from './utils/dateUtils';
 import { calculateStreak, getTotalStats } from './utils/habitStats';
-import { Flame, Target, TrendingUp, XCircle, CalendarDays } from 'lucide-react';
+import { Flame, Target, TrendingUp, XCircle, CalendarDays, Bell } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Toaster, toast } from 'sonner';
 
@@ -54,7 +54,7 @@ function AppContent() {
         // Request permission
         const permResult = await LocalNotifications.requestPermissions();
         if (permResult.display !== 'granted') {
-          console.log('Notification permission not granted');
+          toast.error('Notifikácie nie sú povolené! Povoľ ich v nastaveniach.');
           return;
         }
 
@@ -65,42 +65,44 @@ function AppContent() {
         }
 
         // Schedule notifications for each habit with reminder time
-        const notifications = habits
-          .filter(habit => habit.reminderTime)
-          .map((habit, index) => {
-            const [hours, minutes] = habit.reminderTime!.split(':').map(Number);
-            const now = new Date();
-            const scheduleDate = new Date();
-            scheduleDate.setHours(hours, minutes, 0, 0);
+        const habitsWithReminder = habits.filter(habit => habit.reminderTime);
 
-            // If time already passed today, schedule for tomorrow
-            if (scheduleDate <= now) {
-              scheduleDate.setDate(scheduleDate.getDate() + 1);
-            }
-
-            return {
-              id: index + 1,
-              title: `🔔 ${habit.name}`,
-              body: `Čas na tvoj návyk! ${habit.icon}`,
-              schedule: {
-                at: scheduleDate,
-                repeats: true,
-                every: 'day' as const
-              },
-              sound: 'default',
-              smallIcon: 'ic_launcher',
-              largeIcon: 'ic_launcher',
-            };
-          });
-
-        if (notifications.length > 0) {
-          await LocalNotifications.schedule({ notifications });
-          console.log('Scheduled notifications:', notifications.length);
+        if (habitsWithReminder.length === 0) {
+          return;
         }
-      } catch (error) {
-        console.log('LocalNotifications not available (web mode):', error);
 
-        // Fallback for web: use regular notifications
+        const notifications = habitsWithReminder.map((habit, index) => {
+          const [hours, minutes] = habit.reminderTime!.split(':').map(Number);
+          const now = new Date();
+          const scheduleDate = new Date();
+          scheduleDate.setHours(hours, minutes, 0, 0);
+
+          // If time already passed today, schedule for tomorrow
+          if (scheduleDate <= now) {
+            scheduleDate.setDate(scheduleDate.getDate() + 1);
+          }
+
+          return {
+            id: index + 1,
+            title: `🔔 ${habit.name}`,
+            body: `Čas na tvoj návyk! ${habit.icon}`,
+            schedule: {
+              at: scheduleDate,
+              repeats: true,
+              every: 'day' as const
+            },
+            sound: 'default',
+            smallIcon: 'ic_launcher',
+            largeIcon: 'ic_launcher',
+          };
+        });
+
+        await LocalNotifications.schedule({ notifications });
+        toast.success(`Naplánované ${notifications.length} pripomienky`);
+
+      } catch (error) {
+        console.log('LocalNotifications error:', error);
+        // Fallback for web
         if ('Notification' in window && Notification.permission === 'default') {
           Notification.requestPermission();
         }
@@ -109,6 +111,35 @@ function AppContent() {
 
     scheduleNotifications();
   }, [habits]);
+
+  // Test notification function
+  const sendTestNotification = async () => {
+    try {
+      const permResult = await LocalNotifications.requestPermissions();
+      if (permResult.display !== 'granted') {
+        toast.error('Notifikácie nie sú povolené!');
+        return;
+      }
+
+      // Send notification in 5 seconds
+      const scheduleDate = new Date(Date.now() + 5000);
+
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: 9999,
+          title: '🔔 Test notifikácie',
+          body: 'Ak toto vidíš, notifikácie fungujú!',
+          schedule: { at: scheduleDate },
+          sound: 'default',
+          smallIcon: 'ic_launcher',
+        }]
+      });
+
+      toast.success('Testovacia notifikácia príde o 5 sekúnd! Môžeš zatvoriť appku.');
+    } catch (error) {
+      toast.error('Chyba: ' + String(error));
+    }
+  };
 
   const filteredHabits = useMemo(() => {
     let filtered = habits;
@@ -255,6 +286,13 @@ function AppContent() {
             <p className="mt-2 text-xs md:text-sm opacity-80 italic hidden sm:block">
               Každý deň je nová príležitosť zmeniť svoje návyky. Pokračuj! 💪
             </p>
+            <button
+              onClick={sendTestNotification}
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              <Bell className="w-4 h-4" />
+              Test notifikácie (5s)
+            </button>
           </motion.div>
 
           {/* KPI Cards */}
