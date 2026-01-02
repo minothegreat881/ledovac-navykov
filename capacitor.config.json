@@ -2,10 +2,17 @@
   "appId": "com.ledovac.navykov",
   "appName": "Ledovac Navykov",
   "webDir": "dist",
+  "server": {
+    "url": "https://ledovac-navykov.vercel.app",
+    "cleartext": true
+  },
   "plugins": {
     "CapacitorUpdater": {
-      "autoUpdate": true,
-      "statsUrl": ""
+      "autoUpdate": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_launcher",
+      "iconColor": "#3b82f6"
     }
   }
 }
