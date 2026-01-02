@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ledovac Navykov</string>
+    <string name="title_activity_main">Ledovac Navykov</string>
+    <string name="package_name">com.ledovac.navykov</string>
+    <string name="custom_url_scheme">com.ledovac.navykov</string>
+</resources>

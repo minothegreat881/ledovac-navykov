@@ -1,0 +1,11 @@
+{
+  "appId": "com.ledovac.navykov",
+  "appName": "Ledovac Navykov",
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "statsUrl": ""
+    }
+  }
+}
