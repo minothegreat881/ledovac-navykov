@@ -69,20 +69,34 @@ function AppContent() {
           vibration: true,
         });
 
-        // Cancel all existing notifications first
+        // Cancel ALL existing notifications first (both pending and repeating)
         const pending = await LocalNotifications.getPending();
         if (pending.notifications.length > 0) {
-          await LocalNotifications.cancel({ notifications: pending.notifications });
+          await LocalNotifications.cancel({
+            notifications: pending.notifications.map(n => ({ id: n.id }))
+          });
         }
 
         // Schedule notifications for each habit with reminder time
         const habitsWithReminder = habits.filter(habit => habit.reminderTime);
 
         if (habitsWithReminder.length === 0) {
+          console.log('No habits with reminders, all notifications cancelled');
           return;
         }
 
-        const notifications = habitsWithReminder.map((habit, index) => {
+        // Helper to convert habit ID string to stable numeric ID
+        const hashStringToNumber = (str: string): number => {
+          let hash = 0;
+          for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+          }
+          return Math.abs(hash) % 100000 + 1; // Ensure positive and reasonable range
+        };
+
+        const notifications = habitsWithReminder.map((habit) => {
           const [hours, minutes] = habit.reminderTime!.split(':').map(Number);
           const now = new Date();
           const scheduleDate = new Date();
@@ -93,8 +107,11 @@ function AppContent() {
             scheduleDate.setDate(scheduleDate.getDate() + 1);
           }
 
+          // Use stable ID based on habit ID, not array index
+          const notificationId = hashStringToNumber(habit.id);
+
           return {
-            id: index + 1,
+            id: notificationId,
             title: `🔔 ${habit.name}`,
             body: `Čas na tvoj návyk! ${habit.icon}`,
             schedule: {
@@ -112,7 +129,7 @@ function AppContent() {
         });
 
         await LocalNotifications.schedule({ notifications });
-        toast.success(`Naplánované ${notifications.length} pripomienky`);
+        console.log('Scheduled notifications:', notifications.map(n => ({ id: n.id, title: n.title })));
 
       } catch (error) {
         console.log('LocalNotifications error:', error);
