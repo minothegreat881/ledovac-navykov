@@ -228,12 +228,13 @@ export function HabitDetailDrawer({ isOpen, onClose, habit, records, onEdit, onD
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[500px] overflow-y-auto bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-        <SheetHeader>
-          <SheetTitle>Detail návyku</SheetTitle>
-        </SheetHeader>
+      <SheetContent className="w-full overflow-y-auto bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-0">
+        <div className="max-w-2xl mx-auto p-6">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-2xl">Detail návyku</SheetTitle>
+          </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+          <div className="space-y-6">
           {/* Habit info card */}
           <div className={`p-6 rounded-2xl border ${
             habit.type === 'good' 
@@ -486,6 +487,7 @@ export function HabitDetailDrawer({ isOpen, onClose, habit, records, onEdit, onD
               <Trash2 className="w-4 h-4 mr-2" />
               Zmazať
             </Button>
+          </div>
           </div>
         </div>
       </SheetContent>
