@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ThemeProvider } from 'next-themes';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Header } from './components/Header';
 import { LeftSidebar } from './components/LeftSidebar';
 import { RightPanel } from './components/RightPanel';
@@ -46,51 +47,68 @@ function AppContent() {
 
   const totalStats = getTotalStats(habits, records);
 
-  // Request notification permission and setup reminder checks
+  // Schedule local notifications for habits with reminder times
   useEffect(() => {
-    // Request permission for notifications
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
-    // Check for reminders every minute
-    const checkReminders = () => {
-      const now = new Date();
-      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const today = formatDate(now);
-
-      habits.forEach(habit => {
-        if (habit.reminderTime === currentTime) {
-          // Check if habit is not completed today
-          const record = getRecord(habit.id, today);
-          if (!record || record.status !== 'success') {
-            // Send notification
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(`🔔 ${habit.name}`, {
-                body: `Čas na tvoj návyk! ${habit.icon}`,
-                icon: '/icons/icon-192x192.png',
-                tag: habit.id,
-                requireInteraction: true
-              });
-            }
-            // Also show toast
-            toast(`🔔 Pripomienka: ${habit.name}`, {
-              description: 'Čas splniť tento návyk!',
-              duration: 10000,
-            });
-          }
+    const scheduleNotifications = async () => {
+      try {
+        // Request permission
+        const permResult = await LocalNotifications.requestPermissions();
+        if (permResult.display !== 'granted') {
+          console.log('Notification permission not granted');
+          return;
         }
-      });
+
+        // Cancel all existing notifications first
+        const pending = await LocalNotifications.getPending();
+        if (pending.notifications.length > 0) {
+          await LocalNotifications.cancel({ notifications: pending.notifications });
+        }
+
+        // Schedule notifications for each habit with reminder time
+        const notifications = habits
+          .filter(habit => habit.reminderTime)
+          .map((habit, index) => {
+            const [hours, minutes] = habit.reminderTime!.split(':').map(Number);
+            const now = new Date();
+            const scheduleDate = new Date();
+            scheduleDate.setHours(hours, minutes, 0, 0);
+
+            // If time already passed today, schedule for tomorrow
+            if (scheduleDate <= now) {
+              scheduleDate.setDate(scheduleDate.getDate() + 1);
+            }
+
+            return {
+              id: index + 1,
+              title: `🔔 ${habit.name}`,
+              body: `Čas na tvoj návyk! ${habit.icon}`,
+              schedule: {
+                at: scheduleDate,
+                repeats: true,
+                every: 'day' as const
+              },
+              sound: 'default',
+              smallIcon: 'ic_launcher',
+              largeIcon: 'ic_launcher',
+            };
+          });
+
+        if (notifications.length > 0) {
+          await LocalNotifications.schedule({ notifications });
+          console.log('Scheduled notifications:', notifications.length);
+        }
+      } catch (error) {
+        console.log('LocalNotifications not available (web mode):', error);
+
+        // Fallback for web: use regular notifications
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
     };
 
-    // Check immediately on load
-    checkReminders();
-
-    // Then check every minute
-    const interval = setInterval(checkReminders, 60000);
-
-    return () => clearInterval(interval);
-  }, [habits, getRecord]);
+    scheduleNotifications();
+  }, [habits]);
 
   const filteredHabits = useMemo(() => {
     let filtered = habits;
